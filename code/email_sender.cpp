@@ -5,11 +5,12 @@
 
 #include "smtp.h"
 #include "settings.h"
+#include "openssl.h"
 #include <exception>
 #include <locale>
+#include "crypto.h"
 
 #define LOCALE_NAME		"Russian_Russia.866"
-#define BUFFER_SIZE		512
 
 bool SetConsoleErrorToRedColor()
 {
@@ -38,44 +39,62 @@ bool SetConsoleErrorToRedColor()
 //{
 //}
 
+bool check_result(
+	_in int result_etalon,
+	_in int result
+) {
+	if ( result_etalon == result )
+		return true;
+
+	TRACE_ERROR( L"result: %i", result );
+	return false;
+}
+
 int wmain(
 	int argc, 
 	cstr_t* argv[]
 ) {
+	UNREFERENCED_PARAMETER( argc );
+	UNREFERENCED_PARAMETER( argv );
+
 	int exit_code = 0;
+
+	base64::test test;
+	
+	test.encode__strings();		printf_s( "\n" );
+	//test.decode__strings();		printf_s( "\n" );
+	test.encode__data();		printf_s( "\n" );
+	//test.decode__data();		printf_s( "\n" );
 
 	try
 	{
-		if ( !_wsetlocale( LC_ALL, TEXT(LOCALE_NAME) ) )
+		if ( !setlocale( LC_ALL, LOCALE_NAME ) )
 		{
-			TRACE_ERROR( L"_wsetlocale(): не удалось установить локаль \"%S\"", LOCALE_NAME );
+			TRACE_ERROR( L"setlocale(): не удалось установить локаль \"%S\"", LOCALE_NAME );
 			throw std::ios_base::failure ( "error setting locale: \"" LOCALE_NAME "\"" );
 		}
 
 		NETWORK_SUPPORT( 2, 2 );
-
+		
 		smtp::client smtp_client;
-		exit_code = smtp_client.connect( SMTP_SERVER_NAME, SMTP_SERVER_PORT );
+
+		// соединяемся с smtp-сервером для отправки почты
+		exit_code = smtp_client.connect( SMTP_SERVER_NAME, SMTP_SERVER_PORT, smtp::client::connect_security::ssl );
 		if ( ERROR_SUCCESS != exit_code )
 			goto exit;
-
-		byte_t buffer[ BUFFER_SIZE ];
-		int length;
-
-		//length = recv( smtp_client.socket, buffer, _countof( buffer ), 0 );
-
-		//length = sprintf_s( buffer, _countof(buffer), "EHLO %S\n", SMTP_SERVER_NAME ); 
-		//length = send( smtp_client.socket, buffer, length, 0 );
-		//length = recv( smtp_client.socket, buffer, _countof( buffer ), 0 );
-		//if ( length < 0 )
-		//	TRACE_ERROR( L"recv(), error: %li", smtp::wsalib::get_error() );
-
-		//length = smtp_client.receive();
+		
+		// посылаем приветствие серверу
 		//length = smtp_client.send( "EHLO %S\n", SMTP_SERVER_NAME );
-		length = smtp_client.send( "EHLO my_name\r\n" );
-		//length = smtp_client.send( "AUTH PLAIN\r\n" );
-		length = smtp_client.receive();
+		smtp_client.send_ehlo( /*EMAIL_ADDRESS_FROM*/ );
 
+		// авторизация
+		if ( !smtp_client.auth_plain( EMAIL_ADDRESS_FROM, EMAIL_ADDRESS_FROM_PASSWORD ) )
+		{
+			const std::string error( "authentication for \"" + std::string( EMAIL_ADDRESS_FROM ) + "\" failed (incorrect login data?)" );
+			throw std::logic_error( error );
+		}
+
+		// формирование и отправка e-mail собщения
 	}
 	catch ( const std::exception &e )
 	{

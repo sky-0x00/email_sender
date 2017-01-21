@@ -6,6 +6,9 @@
 #define TRACE_NORMAL( format, ... )			tracer.trace( __FUNCTIONW__, trace::category::normal, format, __VA_ARGS__ )
 #define TRACE_ERROR( format, ... )			tracer.trace( __FUNCTIONW__, trace::category::error, format, __VA_ARGS__ )
 
+#define ERROR_UNKNOWN	L"Unknown exception"
+#define TRACE_ERROR_UNKNOWN( )				TRACE_ERROR( ERROR_UNKNOWN )
+
 namespace trace
 {
 	enum class category
