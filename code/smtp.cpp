@@ -10,7 +10,6 @@
 //#include <regex>
 #include <vector>
 #include <iterator>
-#include "crypto.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -19,6 +18,11 @@ static_assert( sizeof( sockaddr ) == sizeof( sockaddr_in ), "не совпадают размер
 bool operator <( _in const in_addr &lhs, _in const in_addr &rhs ) 
 {
 	return lhs.s_addr < rhs.s_addr;
+}
+
+std::string smtp::get_external_ip(
+) {
+	throw std::logic_error( NOT_IMPLEMENTED );
 }
 
 smtp::wsalib::wsalib(
@@ -113,7 +117,7 @@ smtp::client::~client(
 	const auto result = getaddrinfo( hostname, portstr, &addrinfo_hint, &p_addrinfo_result );
 	if ( result )
 	{
-		TRACE_ERROR( L"getaddrinfo(\"%s\"), error: %li", hostname, result ); 
+		TRACE_ERROR( L"getaddrinfo(\"%S\"), error: %li", hostname, result ); 
 		return result;
 	}
 
@@ -125,7 +129,7 @@ smtp::client::~client(
 	}
 	freeaddrinfo( p_addrinfo_result );
 
-	TRACE_NORMAL( L"\"%s\", ok (%lu address)", hostname, address_list.size() );
+	TRACE_NORMAL( L"\"%S\", ok (%lu address)", hostname, address_list.size() );
 	return ERROR_SUCCESS;
 }
 
@@ -252,9 +256,9 @@ void smtp::client::send_ehlo(
 	_in ansicstr_t client_name /*= nullptr */
 ) {
 	if ( !client_name )
-		client_name = "client_name";
+		client_name = "localhost";
 
-	send( "EHLO %s\r\n", client_name );
+	send( "EHLO %s", client_name );
 	receive();
 
 	int res_code;
@@ -281,11 +285,12 @@ size_t smtp::client::send(
 ) {
 	auto length = vsprintf_s( m__buffer, m__buffer_size, format, va_args );
 	assert( length >= 0 );
-
-	const auto result = is_secured() ? send__ssl( length ) : send__no_cypher( length );
 	TRACE_NORMAL( L"C> %S", m__buffer );
 
-	return result;	
+	assert( 2 == sprintf_s( m__buffer + length, m__buffer_size - length, "\r\n" ) );
+	length += 2;
+
+	return is_secured() ? send__ssl( length ) : send__no_cypher( length );	
 }
 
 size_t smtp::client::send__ssl(
@@ -352,6 +357,26 @@ int smtp::client::get_result(
 	return result;
 }
 
+std::string smtp::client::encode_mime(
+	_in ansicstr_t str_ansi,
+	_in crypto::method crypto_method
+) {
+	std::string result = "=?utf-8?";
+
+	switch ( crypto_method )
+	{
+	case crypto::method::base64:
+		result += "B?" + crypto::base64::encode( str_ansi ) + "?=";
+		break;
+
+		case crypto::method::quoted_printable:
+		result += "Q?" + crypto::quoted_printable::encode( str_ansi ) + "?=";
+		break;
+	}
+
+	return result;
+}
+
 bool smtp::client::check_result(
 	_in int result_expected,
 	_out int *p_result /*= nullptr */
@@ -400,20 +425,20 @@ bool smtp::client::auth_plain(
 		combined.push_back( *p );
 
 	// кодируем комбинированную строку в base64
-	const auto &combined_hash = base64::encode( combined.data(), combined.size() );
+	const auto &combined_hash = crypto::base64::encode( combined.data(), combined.size() );
 
 	// и отправляем серверу
 	if ( is_forced )										// в форсированном режиме
-		send( "AUTH PLAIN %s\r\n", combined_hash.c_str() );		
+		send( "AUTH PLAIN %s", combined_hash.c_str() );		
 	else													// в режиме с предварительным уведомлением и получением ответа
 	{
-		send( "AUTH PLAIN\r\n" );
+		send( "AUTH PLAIN" );
 		receive();
 
 		if ( !check_result( 334 ) )
 			throw std::logic_error( m__buffer );
 
-		send( "%s\r\n", combined_hash.c_str() );
+		send( combined_hash.c_str() );
 	}
 
 	receive();	
@@ -428,4 +453,81 @@ bool smtp::client::auth_plain(
 	}
 	
 	return true;
+}
+
+bool smtp::client::mail(
+	_in ansicstr_t address_from, 
+	_in ansicstr_t address_to, 
+	_in ansicstr_t message_title, 
+	_in ansicstr_t message_body,
+	_in std::string *id /*= nullptr */
+) {
+	send( "MAIL FROM:<%s>", address_from );
+	receive();
+	if ( !check_result( 250 ) )
+		return false;
+	
+	send( "RCPT TO:<%s>", address_to );
+	receive();
+	if ( !check_result( 250 ) )
+		return false;
+
+	send( "DATA" );
+	receive();
+	if ( !check_result( 354 ) )
+		return false;
+
+	// заголовки сообщения
+	const auto &sender_name = encode_mime( EMAIL_FROM_NAME, crypto::method::base64 );
+	send( "From: \"%s\" <%s>", sender_name.c_str(), address_from );
+	send( "Reply-To: \"%s\" <%s>", sender_name.c_str(), address_from );
+	send( "To: <%s>", address_to );
+	send( "Subject: %s", encode_mime( message_title, crypto::method::base64 ).c_str() );
+	send( "Content-Type: text/plain" );
+	//send( "X-Priority: 3" );					// приоритет: 1 очень низкий, 2 низкий, 3 нормальный (по умолч.), 4 высокий, 5 очень высокой 
+	send( "X-Spam: Not detected" );
+
+	send( "" );
+
+	// тело сообщения
+	send( "%s", message_body );
+	send( "." );									// "end-of-the-message" marker
+	receive();
+	if ( !check_result( 250 ) )
+		return false;
+
+	if ( id )
+	{
+		std::pair< ansicstr_t, ansicstr_t > p_found = std::make_pair( strchr( m__buffer, '=' ), nullptr );
+		if ( p_found.first )
+		{
+			while ( *(++p_found.first) == ' ' );
+			p_found.second = strstr( p_found.first, "\r\n" );
+			if ( p_found.second )
+				id->assign( p_found.first, p_found.second - p_found.first );
+			else
+				id->assign( p_found.first );
+		}
+	}
+
+	return true;
+}
+
+//void smtp::client::mail( 
+//	_in ansicstr_t address_from, 
+//	_in const ansicstr_t *addresslist_to, 
+//	_in size_t size_to,
+//	_in ansicstr_t message_title, 
+//	_in ansicstr_t message_body 
+//) {
+//	for ( size_t i = 0; i < size_to; ++i )
+//		mail( address_from, addresslist_to[i], message_title, message_body );
+//}
+
+bool smtp::client::quit(
+) {
+	send( "QUIT" );
+	receive();
+
+	return check_result( 221 );
 }

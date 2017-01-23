@@ -7,9 +7,45 @@
 //---------------------------------------------------------------------------------------------------------------------
 #define BASE64__SCHEMA_SIZE		64
 
+namespace crypto
+{
+	ansichar_t get_hexdigit( _in byte_t nibble, _in bool is_upper = true )
+	{
+		// nibble - полубайт 0..F
+		
+		if ( nibble < 10 )
+			return nibble + '0';
+		if ( nibble < 16 )
+		{
+			nibble -= 10;
+			return is_upper ? nibble + 'A' : nibble + 'a';
+		}
+
+		TRACE_ERROR( L"nibble: 0x%02X, expected [0..0xF)", nibble );
+		throw std::logic_error( "nibble too large" );
+	}
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::string crypto::encode(
+	_in ansicstr_t str_ansi,
+	_in method method
+) {
+	switch ( method )
+	{
+		case method::base64:
+			return base64::encode( str_ansi );
+		
+		case method::quoted_printable:
+			return quoted_printable::encode( str_ansi );
+	}
+	
+	throw std::logic_error( NOT_IMPLEMENTED );
+}
+
 //---------------------------------------------------------------------------------------------------------------------
 // схема кодирования - на входе число [0..64), на выходе - символ из массива schema
-/*static*/ char base64::encoder::get_char(
+/*static*/ char crypto::base64::encoder::get_char(
 	_in unsigned index
 ) {
 	static const char schema[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -22,9 +58,9 @@
 	throw std::logic_error( std::to_string( index ) );
 }
 
-/*static*/ void base64::encoder::encode_triplet(
-	_in const triplet &data,
-	_out word &result
+/*static*/ void crypto::base64::encoder::encode_triplet(
+	_in const triplet_t &data,
+	_out word_t &result
 ) {
 	// 1-ые 6 бит - это старшие биты из 1-го байта
 	unsigned index = (data[0] >> 2) & 0x3F;
@@ -45,7 +81,7 @@
 
 
 // схема декодирования - на входе символ из массива schema (см. ф-ию encode), на выходе - число [0..64)
-/*static*/ unsigned base64::decoder::get_index(
+/*static*/ unsigned crypto::base64::decoder::get_index(
 	_in char ch
 ) {
 	//static const char schema[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -70,13 +106,13 @@
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-/*static*/ std::string base64::encode(
+/*static*/ std::string crypto::base64::encode(
 	_in ansicstr_t str_ansi
 ) {
 	std::string result;
 
-	triplet data_block;
-	word result_block;
+	triplet_t data_block;
+	word_t result_block;
 	unsigned index_mod = 0;
 
 	for ( decltype(str_ansi) p_data = str_ansi; *p_data; ++p_data, index_mod = (index_mod + 1) % BASE64__TRIPLET_SIZE )
@@ -106,7 +142,7 @@
 
 	return result;
 }
-/*static*/ std::string base64::decode(
+/*static*/ std::string crypto::base64::decode(
 	_in ansicstr_t str_base64
 ) {
 	
@@ -177,14 +213,14 @@
 }
 
 
-/*static*/ std::string base64::encode(
+/*static*/ std::string crypto::base64::encode(
 	_in cdata_t data,
 	_in size_t size
 ) {
 	std::string result;
 
-	triplet data_block;
-	word result_block;
+	triplet_t data_block;
+	word_t result_block;
 
 	std::pair< unsigned, unsigned > count( std::make_pair( size / BASE64__TRIPLET_SIZE, size % BASE64__TRIPLET_SIZE ) );
 	while ( count.first-- )
@@ -218,7 +254,7 @@
 
 	return result;
 }
-/*static*/ void base64::decode(
+/*static*/ void crypto::base64::decode(
 	_in ansicstr_t str_base64,
 	_out std::vector<byte_t> &result
 ) {
@@ -227,7 +263,7 @@
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-base64::test::test(
+crypto::base64::test::test(
 )
 	: m__data_hash( "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc\
 4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+\
@@ -237,7 +273,7 @@ IycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==" )
 	init_data();
 }
 
-void base64::test::init_data(
+void crypto::base64::test::init_data(
 ) {
 	auto size = 0x100;
 	m__data.resize( size );
@@ -246,12 +282,12 @@ void base64::test::init_data(
 		m__data[ size ] = static_cast<byte_t>( size );
 }
 
-/*static*/ bool base64::test::encode__string(
+/*static*/ bool crypto::base64::test::encode__string(
 	_in ansicstr_t str_ansi,
 	_in ansicstr_t str_base64
 ) const
 {
-	const auto &str_enc = encode( str_ansi );
+	const auto &str_enc = base64::encode( str_ansi );
 	printf_s( "encode( \"%s\" ): \"%s\" => ", str_ansi, str_enc.c_str() );
 	const auto result = 0 == strcmp( str_enc.c_str(), str_base64 );
 	if ( result )
@@ -261,7 +297,7 @@ void base64::test::init_data(
 	return result;
 }
 
-/*static*/ void base64::test::encode__strings(
+/*static*/ void crypto::base64::test::encode__strings(
 ) const 
 {
 	encode__string( "", "" );
@@ -278,12 +314,12 @@ void base64::test::init_data(
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-/*static*/ bool base64::test::decode__string(
+/*static*/ bool crypto::base64::test::decode__string(
 	_in ansicstr_t str_base64,
 	_in ansicstr_t str_ansi
 ) const 
 {
-	const auto &str_dec = decode( str_ansi );
+	const auto &str_dec = base64::decode( str_ansi );
 	printf_s( "decode( \"%s\" ): \"%s\" => ", str_base64, str_dec.c_str() );
 	const auto result = 0 == strcmp( str_dec.c_str(), str_ansi );
 	if ( result )
@@ -293,7 +329,7 @@ void base64::test::init_data(
 	return result;
 }
 
-/*static*/ void base64::test::decode__strings(
+/*static*/ void crypto::base64::test::decode__strings(
 ) const 
 {
 	decode__string( "", "" );
@@ -310,13 +346,13 @@ void base64::test::init_data(
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-/*static*/ bool base64::test::encode__data_block(
+/*static*/ bool crypto::base64::test::encode__data_block(
 	_in cdata_t data,
 	_in size_t size,
 	_in ansicstr_t str_base64
 ) const
 {
-	const auto &str_enc = encode( data, size );
+	const auto &str_enc = base64::encode( data, size );
 	printf_s( "encode(): \"%s\" => ", str_enc.c_str() );
 	const auto result = 0 == strcmp( str_enc.c_str(), str_base64 );
 	if ( result )
@@ -326,7 +362,7 @@ void base64::test::init_data(
 	return result;
 }
 	
-/*static*/ void base64::test::encode__data(
+/*static*/ void crypto::base64::test::encode__data(
 ) const 
 {
 	encode__data_block( reinterpret_cast<cdata_t>( "" ), 0, "" );
@@ -344,13 +380,13 @@ void base64::test::init_data(
 	encode__data_block( m__data.data(), m__data.size(), m__data_hash );
 }
 //---------------------------------------------------------------------------------------------------------------------
-/*static*/ bool base64::test::decode__data_block(
+/*static*/ bool crypto::base64::test::decode__data_block(
 	_in ansicstr_t str_base64,
 	_in const std::vector< byte_t > &data
 ) const 
 {
 	std::vector< byte_t > data_dec;
-	decode( str_base64, data_dec );
+	base64::decode( str_base64, data_dec );
 	printf_s( "decode( \"%s\" ) => ", str_base64 );
 	if ( data_dec == data )
 	{
@@ -369,7 +405,7 @@ void base64::test::init_data(
 	return false;
 }
 
-/*static*/ const std::vector<byte_t>& base64::test::get_vector_from_string(
+/*static*/ const std::vector<byte_t>& crypto::base64::test::get_vector_from_string(
 	_in ansicstr_t str
 ) {
 	static std::vector<byte_t> data( 16 );
@@ -381,7 +417,7 @@ void base64::test::init_data(
 	return data;
 }
 
-/*static*/ void base64::test::decode__data(
+/*static*/ void crypto::base64::test::decode__data(
 ) const
 {
 	decode__data_block( "", get_vector_from_string( "" ) );
@@ -397,6 +433,152 @@ void base64::test::init_data(
 	decode__data_block( "QUJDREVGR0g=", get_vector_from_string( "ABCDEFGH" ) );
 
 	decode__data_block( m__data_hash, m__data );
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/*static*/ bool crypto::quoted_printable::encoder::is_direct(
+	_in ansichar_t ch
+) {
+	// символы, выводимые as-is
+	switch ( ch )
+	{
+	case '.':
+	case ',':
+		return true;
+	}
+
+	if ( in_range< ansichar_t >( ch, { '0', '9' } ) )
+		return true;
+
+	if ( in_range< ansichar_t >( ch, { 'A', 'Z' } ) )
+		return true;
+
+	if ( in_range< ansichar_t >( ch, { 'a', 'z' } ) )
+		return true;
+
+	// все остальные выводятся преобразованием
+	return false;
+}
+
+
+
+/*static*/ void crypto::quoted_printable::encoder::encode_byte(
+	_in byte_t byte,
+	_out ansistr_t result
+) {
+	result[0] = '=';
+	result[1] = get_hexdigit( (byte >> 4) & 0x0F );
+	result[2] = get_hexdigit( byte & 0x0F );
+}
+
+/*static*/ void crypto::quoted_printable::encoder::encode_char__utf_8(
+	_in ansichar_t ch,
+	_out ansistr_t result
+) {
+	wchar_t wch;
+
+	//А..Е 1040..1045
+	//Ё 1025
+	//Ж..Я 1046..1071
+	//а..е 1072..1077
+	//ё 1105
+	//ж..я 1078..1103
+
+	if ( in_range(ch, { 'А', 'Я' }) )
+		wch = ch - 'А' + 1040;
+	else
+	if ( in_range(ch, { 'а', 'я' }) )
+		wch = ch - 'а' + 1072;
+	else
+	if ( ch == 'Ё' )
+		wch = ch - 'Ё' + 1025;
+	else
+	if ( ch == 'ё' )
+		wch = ch - 'ё' + 1105;
+	else
+	{
+		TRACE_ERROR( L"not supported char: %hi", static_cast<wchar_t>( ch ) );
+		throw std::logic_error( NOT_SUPPORTED );
+	}
+
+	// шаблон 110xxxxx 10xxxxxx - 11 бит разносятся
+	wch = 0xC080 | (wch & 0x3F) | ((wch << 2) & 0x1F00);
+
+	encode_byte( (wch >> 8) & 0xFF, result );
+	encode_byte( wch & 0xFF, result + 3 );
+}
+
+/*static*/ unsigned crypto::quoted_printable::encoder::encode_char(
+	_in ansichar_t ch,
+	_out ansistr_t result,
+	_in codepage codepage /*= codepage::utf_8 */
+) {
+	if ( is_direct( ch ) )
+	{
+		result[0] = ch;
+		return 1;
+	}
+
+	if ( static_cast<byte_t>( ch ) < 0x80 )
+	{
+		encode_byte( ch, result );
+		return 3;
+	}
+	
+	switch ( codepage )
+	{
+	case codepage::utf_8:
+		encode_char__utf_8( ch, result );
+		return 6;
+	}
+
+	TRACE_ERROR( L"unsupported codepage: %i", static_cast<int>( codepage ) );
+	throw std::logic_error( "unsupported codepage" );
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+/*static*/ std::string crypto::quoted_printable::encode(
+	_in ansicstr_t str_ansi,
+	_in codepage codepage /*= codepage::utf_8 */
+) {
+	std::string result;
+	ansichar_t buffer[6];
+
+	for ( ansicstr_t p = str_ansi; *p; ++p )
+	{
+		const auto size = encoder::encode_char( *p, buffer, codepage );
+		result.append( buffer, size );
+	}
+
+	return result;
+}
+
+/*static*/ std::string crypto::quoted_printable::decode(
+	_in ansicstr_t str_quoted
+) {
+	UNREFERENCED_PARAMETER( str_quoted );
+
+	throw std::logic_error( NOT_IMPLEMENTED );
+}
+
+/*static*/ std::string crypto::quoted_printable::encode(
+	_in cdata_t data,
+	_in size_t size
+) {
+	UNREFERENCED_PARAMETER( data );
+	UNREFERENCED_PARAMETER( size );
+
+	throw std::logic_error( NOT_IMPLEMENTED );
+}
+	
+/*static*/ void crypto::quoted_printable::decode(
+	_in ansicstr_t str_quoted,
+	_out std::vector<byte_t> &data
+) {
+	UNREFERENCED_PARAMETER( str_quoted );
+	UNREFERENCED_PARAMETER( data );
+
+	throw std::logic_error( NOT_IMPLEMENTED );
 }
 
 //---------------------------------------------------------------------------------------------------------------------

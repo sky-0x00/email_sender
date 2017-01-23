@@ -305,4 +305,7 @@
       <Filter>openssl</Filter>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="myexternalip.ps1" />
+  </ItemGroup>
 </Project>

@@ -4,6 +4,7 @@
 #include <list>
 #include "openssl.h"
 #include <memory>
+#include "crypto.h"
 
 #define NETWORK_SUPPORT( ver_hi, ver_lo )		smtp::wsalib wsalib( ver_hi, ver_lo )
 
@@ -18,6 +19,8 @@ namespace smtp
 		static const port_t port = 25;
 		static const size_t buffer_size = 1024;
 	};
+
+	std::string get_external_ip();
 
 	class wsalib
 	{
@@ -53,6 +56,12 @@ namespace smtp
 			login,
 			xoauth2
 		};
+
+		struct error
+		{
+			int code;
+			std::string message;
+		};
 		
 		// данные по возвращенному адресу д.б. освобождены через FreeAddrInfoW()
 		static wsalib::status resolve_hostname( 
@@ -77,6 +86,13 @@ namespace smtp
 		bool auth( _in ansicstr_t user_name, _in ansicstr_t user_pass, _in auth_type auth_type );
 		bool auth_plain( _in ansicstr_t user_name, _in ansicstr_t user_pass, _in bool is_forced = true );
 
+		bool mail( _in ansicstr_t address_from, _in ansicstr_t address_to, _in ansicstr_t message_title, _in ansicstr_t message_body, _in std::string *id = nullptr );
+		//void mail( _in ansicstr_t address_from, _in const ansicstr_t *addresslist_to, _in size_t size_to, _in ansicstr_t message_title, _in ansicstr_t message_body );
+
+		bool quit();
+
+		int get_result( _out _option ansicstr_t *data = nullptr ) const;
+
 	public:
 		SOCKET get_socket() const noexcept;
 		__declspec( property ( get = get_socket ) ) SOCKET socket;
@@ -87,8 +103,7 @@ namespace smtp
 		__declspec( property ( get = get_buffer ) ) const char* buffer;
 
 	private:
-		int get_result( _out _option ansicstr_t *data = nullptr ) const;
-
+		std::string encode_mime( _in ansicstr_t str_ansi, _in crypto::method crypto_method );
 		bool check_result( _in int result_expected, _out int *p_result = nullptr ) const;
 
 		bool is_secured() const noexcept;
@@ -105,5 +120,6 @@ namespace smtp
 		bool			m__is_connected;
 		char*			m__buffer;
 		const size_t	m__buffer_size;
+		error			m__error;
 	};
 }

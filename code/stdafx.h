@@ -14,3 +14,6 @@
 #include "trace.h"
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы
+
+#define NOT_IMPLEMENTED			"not yet implemented"
+#define NOT_SUPPORTED			"not supported"

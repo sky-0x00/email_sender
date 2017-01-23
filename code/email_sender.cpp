@@ -7,10 +7,8 @@
 #include "settings.h"
 #include "openssl.h"
 #include <exception>
-#include <locale>
+#include <mbctype.h>
 #include "crypto.h"
-
-#define LOCALE_NAME		"Russian_Russia.866"
 
 bool SetConsoleErrorToRedColor()
 {
@@ -18,7 +16,7 @@ bool SetConsoleErrorToRedColor()
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	if ( FALSE == GetConsoleScreenBufferInfo( hConsoleOutput, &csbi ) )
 	{
-		TRACE_ERROR( L"GetConsoleScreenBufferInfo(), error: 0x%08X", GetLastError() );
+		TRACE_ERROR( L"GetConsoleScreenBufferInfo(), 0x%08X", GetLastError() );
 		return false;
 	}
 		
@@ -27,55 +25,82 @@ bool SetConsoleErrorToRedColor()
 
 	if ( FALSE == SetConsoleTextAttribute( hConsoleOutput, csbi.wAttributes ) )
 	{
-		TRACE_ERROR( L"SetConsoleTextAttribute(), error: 0x%08X", GetLastError() );
+		TRACE_ERROR( L"SetConsoleTextAttribute(), 0x%08X", GetLastError() );
 		return false;
 	}
 
 	return true;
 }
 
-//template <typename container>
-//void echo_items(_in const container &container, char_t )
-//{
-//}
+void console__set_locale()
+{
+	if ( !setlocale( LC_ALL, LOCALE_NAME ) )
+	{
+		TRACE_ERROR( L"setlocale(): не удалось установить локаль \"%S\"", LOCALE_NAME );
+		const std::string error( "error setting locale: \"" + std::string( LOCALE_NAME ) + "\"" );
+		throw std::ios_base::failure( error );
+	}
+	if ( _setmbcp( _MB_CP_LOCALE ) )
+	{
+		TRACE_ERROR( L"_setmbcp(): не удалось установить mb-локаль" );
+		throw std::ios_base::failure( "error setting mb-locale" );
+	}
 
-bool check_result(
-	_in int result_etalon,
-	_in int result
-) {
-	if ( result_etalon == result )
-		return true;
-
-	TRACE_ERROR( L"result: %i", result );
-	return false;
+	//if ( !_wsetlocale( LC_ALL, TEXT(LOCALE_NAME) ) )
+	//{
+	//	TRACE_ERROR( L"_wsetlocale(): не удалось установить локаль \"%S\"", LOCALE_NAME );
+	//	const std::string error( "error setting locale: \"" + std::string( LOCALE_NAME ) + "\"" );
+	//	throw std::ios_base::failure( error );
+	//}
 }
 
-int wmain(
-	int argc, 
-	cstr_t* argv[]
+void trace__set_filename()
+{
+	char_t buffer[0x100];
+	DWORD size = _countof( buffer );
+	if ( !QueryFullProcessImageName( GetCurrentProcess(), 0, buffer, &size ) )
+	{
+		const auto error = GetLastError();
+		TRACE_ERROR( L"QueryFullProcessImageName(), 0x%08X", error );
+		throw std::system_error ( error, std::system_category() );
+	}
+
+	//wcscpy_s( buffer + size, _countof( buffer ) - size, L"0" );
+
+	for ( char_t *p = buffer + size; --p > buffer; )
+		if ( *p == L'.' )
+		{
+			wcscpy_s( p + 1, _countof( buffer ) - (p + 1 - buffer), L"trace" );
+			break;
+		}
+
+	SETFILE_TRACE( buffer );
+	TRACE_NORMAL( L"Trace filename: \"%s\"", buffer );
+}
+
+int wmain( _in size_t argc, _in cstr_t* argv[]
 ) {
 	UNREFERENCED_PARAMETER( argc );
 	UNREFERENCED_PARAMETER( argv );
 
 	int exit_code = 0;
 
-	base64::test test;
-	
-	test.encode__strings();		printf_s( "\n" );
+	//crypto::base64::test test;	
+	//test.encode__strings();		printf_s( "\n" );
 	//test.decode__strings();		printf_s( "\n" );
-	test.encode__data();		printf_s( "\n" );
+	//test.encode__data();		printf_s( "\n" );
 	//test.decode__data();		printf_s( "\n" );
 
 	try
 	{
-		if ( !setlocale( LC_ALL, LOCALE_NAME ) )
-		{
-			TRACE_ERROR( L"setlocale(): не удалось установить локаль \"%S\"", LOCALE_NAME );
-			throw std::ios_base::failure ( "error setting locale: \"" LOCALE_NAME "\"" );
-		}
+		console__set_locale();
+		trace__set_filename();
 
 		NETWORK_SUPPORT( 2, 2 );
-		
+
+		//const auto x = crypto::quoted_printable::encode( "Туры от naekvatore.ru - 23/01/2017" );
+
+		//const auto external_ip = smtp::get_external_ip();
 		smtp::client smtp_client;
 
 		// соединяемся с smtp-сервером для отправки почты
@@ -95,6 +120,13 @@ int wmain(
 		}
 
 		// формирование и отправка e-mail собщения
+		const ansicstr_t addresslist_to[] = EMAIL_ADDRESS_LIST_TO;
+		const size_t size = _countof( addresslist_to );
+		std::string id;
+		for ( size_t i = 0; i < size; ++i )
+			smtp_client.mail( EMAIL_ADDRESS_FROM, addresslist_to[i], EMAIL_MESSAGE_TOPIC, EMAIL_MESSAGE_CONTENT, &id );
+
+		smtp_client.quit();
 	}
 	catch ( const std::exception &e )
 	{
@@ -114,4 +146,3 @@ int wmain(
 	exit:
 	return exit_code;
 }
-

@@ -5,12 +5,22 @@
 #include <windows.h>			// GetLocalTime()
 #include <stdexcept>			// std::runtime_error
 #include <map>					// category_traits
+#include <string>
+#include <iostream>
 
 trace::tracer::tracer(
 	_in cstr_t module_name
 ) :
-	m__module_name(module_name)
+	m__module_name( module_name )
 {}
+
+trace::tracer::~tracer(
+) {
+	if ( !m__file_stream.is_open() )
+		return;
+	
+	m__file_stream << std::wstring( 120, L'-' ) << L"\n";
+}
 
 size_t trace::tracer::trace(
 	_in cstr_t function, 
@@ -32,7 +42,10 @@ size_t trace::tracer::trace_args(
 	_in va_list va_args
 ) {
 	const auto result = buffer_prepare( function, category, format, va_args );
-	buffer_output();
+	
+	buffer_output__to_debug();
+	if ( m__file_stream.is_open() )
+		buffer_output__to_file();
 
 	return result;
 }
@@ -50,7 +63,7 @@ size_t trace::tracer::buffer_prepare(
 	static const std::map<trace::category, cstr_t> category_traits =
 	{
 		{ category::normal, L""    },
-		{ category::error,  L"E> " }		// если строка не пуста, то добавим в конец пробел
+		{ category::error,  L"ERROR! " }		// если строка не пуста, то добавим в конец пробел
 	};
 
 	// получаем текущее время
@@ -88,8 +101,35 @@ size_t trace::tracer::buffer_get_restsize(
 	return (buffer_size > offset) ? (buffer_size - offset) : 0;
 }
 
-void trace::tracer::buffer_output(
+bool trace::tracer::set_filename( 
+	_in cstr_t filename,
+	_in bool is_append /*= false */
+) {
+	if ( m__file_stream.is_open() )
+	{
+		trace( __FUNCTIONW__, trace::category::error, L"file_stream already opened", filename );
+		throw std::logic_error( "assert: file_stream already opened" );
+	}
+
+	std::ios_base::openmode openmode = std::ios_base::out;
+	if ( is_append )
+		openmode |= std::ios_base::ate;
+
+	m__file_stream.open( filename, openmode );	
+	if ( m__file_stream.is_open() )
+		return true;
+
+	trace( __FUNCTIONW__, trace::category::error, L"file \"%s\" not opened, error: 0x%08X", filename, GetLastError() );
+	return false;
+}
+
+void trace::tracer::buffer_output__to_debug(
 ) const
 {
 	OutputDebugString( m__buffer );
+}
+
+void trace::tracer::buffer_output__to_file(
+) {
+	m__file_stream << m__buffer;
 }
