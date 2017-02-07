@@ -8,6 +8,8 @@
 #include <stdexcept>
 
 typedef unsigned char byte_t;
+typedef unsigned short ushort_t;
+
 typedef byte_t *data_t;
 typedef const byte_t *cdata_t;
 
