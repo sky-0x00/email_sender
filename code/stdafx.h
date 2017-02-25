@@ -17,3 +17,4 @@
 
 #define NOT_IMPLEMENTED			"not yet implemented"
 #define NOT_SUPPORTED			"not supported"
+#define NOT_SUPPORTED_CHAR		NOT_SUPPORTED " char"
