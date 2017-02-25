@@ -27,11 +27,11 @@ namespace crypto
 	public:
 		class test;
 
-		typedef byte_t triplet_t[ BASE64__TRIPLET_SIZE ];			// триплет данных
+		typedef byte_t triplet_t[ BASE64__TRIPLET_SIZE ];		// триплет данных
 		typedef ansichar_t word_t[ BASE64__WORD_SIZE ];			// слово в base64-алфавите (возможно, дополненное 1 или 2 символами '=')
 
-		// преобразования для null-terminated строк
-		static std::string encode( _in ansicstr_t str_ansi );
+		// преобразования для null-terminated строк (или байта со значением 0)
+		static std::string encode( _in ansicstr_t str );
 		static std::string decode( _in ansicstr_t str_base64 );
 
 		// преобразования для блоков данных произвольного размера
@@ -90,7 +90,7 @@ namespace crypto
 		class test;
 
 		// преобразования для null-terminated строк
-		static std::string encode( _in ansicstr_t str_ansi, _in codepage codepage = codepage::utf_8 );
+		static std::string encode( _in ansicstr_t str );
 		static std::string decode( _in ansicstr_t str_quoted );
 
 		// преобразования для блоков данных произвольного размера
@@ -106,12 +106,11 @@ namespace crypto
 	class quoted_printable::encoder
 	{
 	public:
-		// возвращает число символов в результирующем quoted_printable-слове - (1, 3 или 6 символов)
-		static unsigned encode_char( _in ansichar_t ch, _out ansistr_t result, _in codepage codepage = codepage::utf_8 );
+		// возвращает число символов в результирующем quoted_printable-слове - (1 или 3 символа)
+		static unsigned encode_char( _in ansichar_t ch, _out ansistr_t result );
 	private:
-		static void encode_char__utf_8( _in ansichar_t ch, _out ansistr_t result );
 		static void encode_byte( _in byte_t byte, _out ansistr_t result );
-		static bool is_direct( _in ansichar_t ch );
+		static bool is_direct( _in ansichar_t ch ) noexcept;
 	};
 
 	class quoted_printable::decoder

@@ -107,7 +107,7 @@ std::string crypto::encode(
 
 //---------------------------------------------------------------------------------------------------------------------
 /*static*/ std::string crypto::base64::encode(
-	_in ansicstr_t str_ansi
+	_in ansicstr_t str
 ) {
 	std::string result;
 
@@ -115,7 +115,7 @@ std::string crypto::encode(
 	word_t result_block;
 	unsigned index_mod = 0;
 
-	for ( decltype(str_ansi) p_data = str_ansi; *p_data; ++p_data, index_mod = (index_mod + 1) % BASE64__TRIPLET_SIZE )
+	for ( decltype(str) p_data = str; *p_data; ++p_data, index_mod = (index_mod + 1) % BASE64__TRIPLET_SIZE )
 	{
 		data_block[ index_mod ] = *p_data;
 
@@ -436,82 +436,28 @@ void crypto::base64::test::init_data(
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+//
+// символы, выводимые as-is
+//
 /*static*/ bool crypto::quoted_printable::encoder::is_direct(
 	_in ansichar_t ch
-) {
-	// символы, выводимые as-is
-	switch ( ch )
-	{
-	case '.':
-	case ',':
-		return true;
-	}
-
-	if ( in_range< ansichar_t >( ch, { '0', '9' } ) )
-		return true;
-
-	if ( in_range< ansichar_t >( ch, { 'A', 'Z' } ) )
-		return true;
-
-	if ( in_range< ansichar_t >( ch, { 'a', 'z' } ) )
-		return true;
-
-	// все остальные выводятся преобразованием
-	return false;
+) noexcept
+{
+	return ('\t' == ch) || in_range< ansichar_t >( ch, { 32, 60 } ) || in_range< ansichar_t >( ch, { 62, 126 } );
 }
 
-
-
 /*static*/ void crypto::quoted_printable::encoder::encode_byte(
-	_in byte_t byte,
+	_in byte_t value,
 	_out ansistr_t result
 ) {
 	result[0] = '=';
-	result[1] = get_hexdigit( (byte >> 4) & 0x0F );
-	result[2] = get_hexdigit( byte & 0x0F );
-}
-
-/*static*/ void crypto::quoted_printable::encoder::encode_char__utf_8(
-	_in ansichar_t ch,
-	_out ansistr_t result
-) {
-	wchar_t wch;
-
-	//А..Е 1040..1045
-	//Ё 1025
-	//Ж..Я 1046..1071
-	//а..е 1072..1077
-	//ё 1105
-	//ж..я 1078..1103
-
-	if ( in_range(ch, { 'А', 'Я' }) )
-		wch = ch - 'А' + 1040;
-	else
-	if ( in_range(ch, { 'а', 'я' }) )
-		wch = ch - 'а' + 1072;
-	else
-	if ( ch == 'Ё' )
-		wch = ch - 'Ё' + 1025;
-	else
-	if ( ch == 'ё' )
-		wch = ch - 'ё' + 1105;
-	else
-	{
-		TRACE_ERROR( L"not supported char: %hi", static_cast<wchar_t>( ch ) );
-		throw std::logic_error( NOT_SUPPORTED );
-	}
-
-	// шаблон 110xxxxx 10xxxxxx - 11 бит разносятся
-	wch = 0xC080 | (wch & 0x3F) | ((wch << 2) & 0x1F00);
-
-	encode_byte( (wch >> 8) & 0xFF, result );
-	encode_byte( wch & 0xFF, result + 3 );
+	result[1] = get_hexdigit( (value >> 4) & 0x0F );
+	result[2] = get_hexdigit( value & 0x0F );
 }
 
 /*static*/ unsigned crypto::quoted_printable::encoder::encode_char(
 	_in ansichar_t ch,
-	_out ansistr_t result,
-	_in codepage codepage /*= codepage::utf_8 */
+	_out ansistr_t result
 ) {
 	if ( is_direct( ch ) )
 	{
@@ -519,34 +465,21 @@ void crypto::base64::test::init_data(
 		return 1;
 	}
 
-	if ( static_cast<byte_t>( ch ) < 0x80 )
-	{
-		encode_byte( ch, result );
-		return 3;
-	}
-	
-	switch ( codepage )
-	{
-	case codepage::utf_8:
-		encode_char__utf_8( ch, result );
-		return 6;
-	}
-
-	TRACE_ERROR( L"unsupported codepage: %i", static_cast<int>( codepage ) );
-	throw std::logic_error( "unsupported codepage" );
+	encode_byte( ch, result );
+	return 3;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 /*static*/ std::string crypto::quoted_printable::encode(
-	_in ansicstr_t str_ansi,
-	_in codepage codepage /*= codepage::utf_8 */
+	_in ansicstr_t str
 ) {
 	std::string result;
-	ansichar_t buffer[6];
+	ansichar_t buffer[3];
 
-	for ( ansicstr_t p = str_ansi; *p; ++p )
+	for ( ansicstr_t p_ch = str; *p_ch; ++p_ch )
 	{
-		const auto size = encoder::encode_char( *p, buffer, codepage );
+		const auto size = encoder::encode_char( *p_ch, buffer );
+		assert( (1 == size) || (3 == size) );
 		result.append( buffer, size );
 	}
 

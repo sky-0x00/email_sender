@@ -92,7 +92,7 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 	//test.encode__data();		printf_s( "\n" );
 	//test.decode__data();		printf_s( "\n" );
 
-	string::convert::test();
+	//string::convert::test();
 
 	try
 	{

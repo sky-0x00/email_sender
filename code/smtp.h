@@ -86,7 +86,7 @@ namespace smtp
 		bool auth( _in ansicstr_t user_name, _in ansicstr_t user_pass, _in auth_type auth_type );
 		bool auth_plain( _in ansicstr_t user_name, _in ansicstr_t user_pass, _in bool is_forced = true );
 
-		bool mail( _in ansicstr_t address_from, _in ansicstr_t address_to, _in ansicstr_t message_title, _in ansicstr_t message_body, _in std::string *id = nullptr );
+		bool mail( _in ansicstr_t address_from, _in ansicstr_t address_to, _in cstr_t message_title, _in cstr_t message_body, _in std::string *id = nullptr );
 		//void mail( _in ansicstr_t address_from, _in const ansicstr_t *addresslist_to, _in size_t size_to, _in ansicstr_t message_title, _in ansicstr_t message_body );
 
 		bool quit();
@@ -103,7 +103,8 @@ namespace smtp
 		__declspec( property ( get = get_buffer ) ) const char* buffer;
 
 	private:
-		std::string encode_mime( _in ansicstr_t str_ansi, _in crypto::method crypto_method );
+		std::string encode_mime( _in cstr_t str, _in crypto::method crypto_method );
+		std::string encode_mime__body( _in cstr_t str, _in crypto::method crypto_method );			// также 8bit, 7bit, binary - пока не реализовано
 		bool check_result( _in int result_expected, _out int *p_result = nullptr ) const;
 
 		bool is_secured() const noexcept;

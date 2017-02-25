@@ -2,6 +2,7 @@
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "smtp.h"
+#include "utils.h"
 #include "settings.h"
 
 #include <system_error>
@@ -358,23 +359,48 @@ int smtp::client::get_result(
 }
 
 std::string smtp::client::encode_mime(
-	_in ansicstr_t str_ansi,
+	_in cstr_t str,
 	_in crypto::method crypto_method
 ) {
-	std::string result = "=?utf-8?";
+	// сначала преобразуем формат исходной строки в utf-8
+	const auto &str_utf8 = string::convert::to_ansi( str, string::codepage::utf8 );
 
+	// а потом конвертируем полученную ansi- строку (массив байтов до нулевого значения)...
+	std::string result = "=?utf-8?";
 	switch ( crypto_method )
 	{
 	case crypto::method::base64:
-		result += "B?" + crypto::base64::encode( str_ansi ) + "?=";
+		result += "B?" + crypto::base64::encode( str_utf8.c_str() );					// ...в base64- формат
 		break;
 
 		case crypto::method::quoted_printable:
-		result += "Q?" + crypto::quoted_printable::encode( str_ansi ) + "?=";
+		result += "Q?" + crypto::quoted_printable::encode( str_utf8.c_str() );			//...в quoted_printable- формат
 		break;
 	}
+	return result + "?=";
+}
 
-	return result;
+std::string smtp::client::encode_mime__body(
+	_in cstr_t str,
+	_in crypto::method crypto_method
+) {
+	// сначала преобразуем формат исходной строки в utf-8
+	const auto &str_utf8 = string::convert::to_ansi( str, string::codepage::utf8 );
+
+	// а потом конвертируем полученную ansi- строку (массив байтов до нулевого значения)...
+	switch ( crypto_method )
+	{
+	case crypto::method::base64:
+		return crypto::base64::encode( str_utf8.c_str() );					// ...в base64- формат
+
+	case crypto::method::quoted_printable:
+		return crypto::quoted_printable::encode( str_utf8.c_str() );		//...в quoted_printable- формат
+
+	default:
+		// также 8bit, 7bit, binary - пока не реализовано
+		TRACE_ERROR( L"crypto_method: %i", static_cast< int >( crypto_method ) );
+		throw std::logic_error( NOT_SUPPORTED );
+	}
 }
 
 bool smtp::client::check_result(
@@ -455,11 +481,15 @@ bool smtp::client::auth_plain(
 	return true;
 }
 
+//
+// формирует и передает текстовое сообщение (mime- заголовки + тело сообщения)
+// формат пересылаемого сообщения кратко описан здесь http://www2.icmm.ru/~masich/win/lexion/mail/form.html
+//
 bool smtp::client::mail(
 	_in ansicstr_t address_from, 
 	_in ansicstr_t address_to, 
-	_in ansicstr_t message_title, 
-	_in ansicstr_t message_body,
+	_in cstr_t message_title, 
+	_in cstr_t message_body,
 	_in std::string *id /*= nullptr */
 ) {
 	send( "MAIL FROM:<%s>", address_from );
@@ -483,14 +513,22 @@ bool smtp::client::mail(
 	send( "Reply-To: \"%s\" <%s>", sender_name.c_str(), address_from );
 	send( "To: <%s>", address_to );
 	send( "Subject: %s", encode_mime( message_title, crypto::method::base64 ).c_str() );
-	send( "Content-Type: text/plain" );
+	send( "MIME-Version: 1.0" );
+	send( "Content-Type: text/html; charset=\"utf-8\"" );		// html- текст в кодировке utf-8
+	
+	send( "Content-Transfer-Encoding: quoted-printable" );
+	//send( "Content-Transfer-Encoding: base64" );
+
 	//send( "X-Priority: 3" );					// приоритет: 1 очень низкий, 2 низкий, 3 нормальный (по умолч.), 4 высокий, 5 очень высокой 
 	send( "X-Spam: Not detected" );
 
 	send( "" );
 
-	// тело сообщения
-	send( "%s", message_body );
+	// тело сообщения - преобразуем в utf-8 и кодируем в соответствии с заголовком "Content-Transfer-Encoding"
+	//send( "%s", encode_mime__body( message_body, crypto::method::base64 ).c_str() );
+	send( "%s", encode_mime__body( message_body, crypto::method::quoted_printable ).c_str() );
+
+	// зокончили формировать сообщение
 	send( "." );									// "end-of-the-message" marker
 	receive();
 	if ( !check_result( 250 ) )
