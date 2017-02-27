@@ -81,10 +81,16 @@ size_t trace::tracer::buffer_prepare(
 	offset += result;
 
 	// и выводим строку данных
-	result = vswprintf_s( m__buffer + offset, buffer_get_restsize( offset ), format, va_args );
+	result = buffer_get_restsize( offset );
+	result = _vsnwprintf_s( m__buffer + offset, result, result - 1, format, va_args );
 	if ( result < 0 )
-		throw std::runtime_error( "vswprintf_s" );
-	offset += result;
+	{
+		//throw std::runtime_error( "vswprintf_s" );
+		result = swprintf_s( m__buffer + buffer_size - 5, 5, L"..." );
+		//result > 0;
+		offset = buffer_size - 2;
+	} else
+		offset += result;
 
 	// завершаем трассировку переходом на новую строку
 	result = wcscpy_s( m__buffer + offset, buffer_get_restsize( offset ), L"\n" );

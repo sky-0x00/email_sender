@@ -526,6 +526,7 @@ bool smtp::client::mail(
 
 	// тело сообщения - преобразуем в utf-8 и кодируем в соответствии с заголовком "Content-Transfer-Encoding"
 	//send( "%s", encode_mime__body( message_body, crypto::method::base64 ).c_str() );
+	const auto x = encode_mime__body( message_body, crypto::method::quoted_printable );
 	send( "%s", encode_mime__body( message_body, crypto::method::quoted_printable ).c_str() );
 
 	// зокончили формировать сообщение

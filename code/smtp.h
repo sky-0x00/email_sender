@@ -17,7 +17,7 @@ namespace smtp
 	struct default
 	{
 		static const port_t port = 25;
-		static const size_t buffer_size = 1024;
+		static const size_t buffer_size = 0x4000;		// 16 KB
 	};
 
 	std::string get_external_ip();

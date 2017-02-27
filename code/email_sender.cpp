@@ -127,7 +127,7 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 		const size_t size = _countof( addresslist_to );
 		std::string id;
 		for ( size_t i = 0; i < size; ++i )
-			smtp_client.mail( EMAIL_ADDRESS_FROM, addresslist_to[i], EMAIL_MESSAGE_TOPIC, EMAIL_MESSAGE_CONTENT, &id );
+			smtp_client.mail( EMAIL_ADDRESS_FROM, addresslist_to[i], EMAIL_TOPIC, EMAIL_MESSAGE, &id );
 
 		smtp_client.quit();
 	}
