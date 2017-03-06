@@ -94,6 +94,18 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 
 	//string::convert::test();
 
+	//{
+	//	guid guid, guid_true( true );
+	//	const auto str = guid.to_string();
+	//	const auto str_true = guid_true.to_string();
+
+	//	const auto x1 = guid::traits::size_data__bytes();
+	//	const auto x2 = guid::traits::size_string__chars();
+
+	//	UNREFERENCED_PARAMETER( str );
+	//	UNREFERENCED_PARAMETER( str_true );
+	//}
+
 	try
 	{
 		console__set_locale();

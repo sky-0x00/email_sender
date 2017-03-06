@@ -486,9 +486,9 @@ bool smtp::client::auth_plain(
 // формат пересылаемого сообщения кратко описан здесь http://www2.icmm.ru/~masich/win/lexion/mail/form.html
 //
 bool smtp::client::mail(
-	_in ansicstr_t address_from, 
-	_in ansicstr_t address_to, 
-	_in cstr_t message_title, 
+	_in ansicstr_t address_from,
+	_in ansicstr_t address_to,
+	_in cstr_t message_title,
 	_in cstr_t message_body,
 	_in std::string *id /*= nullptr */
 ) {
@@ -496,7 +496,7 @@ bool smtp::client::mail(
 	receive();
 	if ( !check_result( 250 ) )
 		return false;
-	
+
 	send( "RCPT TO:<%s>", address_to );
 	receive();
 	if ( !check_result( 250 ) )
@@ -515,7 +515,7 @@ bool smtp::client::mail(
 	send( "Subject: %s", encode_mime( message_title, crypto::method::base64 ).c_str() );
 	send( "MIME-Version: 1.0" );
 	send( "Content-Type: text/html; charset=\"utf-8\"" );		// html- текст в кодировке utf-8
-	
+
 	send( "Content-Transfer-Encoding: quoted-printable" );
 	//send( "Content-Transfer-Encoding: base64" );
 
@@ -525,9 +525,20 @@ bool smtp::client::mail(
 	send( "" );
 
 	// тело сообщения - преобразуем в utf-8 и кодируем в соответствии с заголовком "Content-Transfer-Encoding"
-	//send( "%s", encode_mime__body( message_body, crypto::method::base64 ).c_str() );
-	//const auto x = encode_mime__body( message_body, crypto::method::quoted_printable );
-	send( "%s", encode_mime__body( message_body, crypto::method::quoted_printable ).c_str() );
+	{
+		std::wstring message( message_body );
+
+		static_assert(_countof( GUID_NULL__STRING ) == 1 + guid::traits::size_string__chars(), "size mismatch");
+		auto s_pos = wcsstr( message.c_str(), GUID_NULL__STRING );
+		assert( s_pos );
+
+		guid guid( true );
+
+	#pragma warning( suppress: 4996 )
+		wcsncpy( const_cast<str_t>(s_pos), guid.to_string(), guid::traits::size_string__chars() );
+
+		send( "%s", encode_mime__body( message.c_str(), crypto::method::quoted_printable ).c_str() );
+	}
 
 	// зокончили формировать сообщение
 	send( "." );									// "end-of-the-message" marker

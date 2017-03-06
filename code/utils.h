@@ -44,10 +44,30 @@ namespace string
 class guid
 {
 public:
-	guid( _in bool is_new = true );
+	struct traits
+	{
+		static constexpr unsigned size_data__bytes() noexcept
+		{
+			return sizeof(GUID);
+		}
+		static constexpr unsigned size_string__chars() noexcept
+		{
+			return 4 + (size_data__bytes() << 1);
+		}
+	};
+
+	guid( _in bool is_new = false );
+	~guid();
 	operator const GUID&() const noexcept;
-	void create_new();
-	std::wstring to_string() const;
+	
+	const guid& create_new();
+	static void create_new( _out GUID &guid );
+	
+	cstr_t to_string();
+
 private:
+	void clear_string();
+
 	GUID m_data;
+	RPC_WSTR m_pstr;
 };

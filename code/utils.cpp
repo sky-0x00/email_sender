@@ -226,11 +226,19 @@
 //---------------------------------------------------------------------------------------------------------------------
 guid::guid(
 	_in bool is_new /*= true*/
-) {
+) :
+	m_pstr( nullptr )
+{
 	if ( is_new )
-		create_new();
+		create_new( m_data );
 	else
 		ZeroMemory( &m_data, sizeof(m_data) );
+}
+
+guid::~guid(
+) {
+	if ( m_pstr )
+		clear_string();
 }
 
 guid::operator const GUID&(
@@ -239,9 +247,10 @@ guid::operator const GUID&(
 	return m_data;
 }
 
-void guid::create_new(
+/*static*/ void guid::create_new(
+	_out GUID &guid
 ) {
-	const auto hr = CoCreateGuid( &m_data );
+	const auto hr = ::CoCreateGuid( &guid );
 	if ( S_OK == hr )
 		return;
 	
@@ -249,25 +258,35 @@ void guid::create_new(
 	throw hr;
 }
 
-std::wstring guid::to_string(
-) const
-{
-	RPC_WSTR p_str;
-	auto rpc_status = UuidToStringW( &m_data, &p_str );
-	if ( RPC_S_OK != rpc_status )
-	{
-		TRACE_ERROR( L"UuidToStringW(), 0x%08X", rpc_status );
-		throw rpc_status;
-	}
+const guid& guid::create_new(
+) {
+	create_new( m_data );
+	return *this;
+}
 
-	std::wstring result( reinterpret_cast<const wchar_t*>( p_str ) );
+void guid::clear_string(
+) {
+	assert( m_pstr );
+
+	const auto rpc_status = RpcStringFree( &m_pstr );
+	if ( RPC_S_OK == rpc_status )
+		return;
 	
-	rpc_status = RpcStringFree( &p_str );
-	if (RPC_S_OK != rpc_status )
-	{
-		TRACE_ERROR( L"RpcStringFree(), 0x%08X", rpc_status );
-		throw rpc_status;
-	}
+	TRACE_ERROR( L"RpcStringFree(), 0x%08X", rpc_status );
+	//throw rpc_status;
+}
+
+cstr_t guid::to_string(
+) {
+	if ( m_pstr )
+		clear_string();
+
+	const auto rpc_status = ::UuidToStringW( &m_data, &m_pstr );
+	if ( RPC_S_OK == rpc_status )
+		return reinterpret_cast< cstr_t >( m_pstr );
+	
+	TRACE_ERROR( L"UuidToStringW(), 0x%08X", rpc_status );
+	throw rpc_status;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
