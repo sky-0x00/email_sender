@@ -137,9 +137,12 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 		// формирование и отправка e-mail собщения
 		const ansicstr_t addresslist_to[] = EMAIL_ADDRESS_LIST_TO;
 		const size_t size = _countof( addresslist_to );
+		
 		std::string id;
+		guid guid;
+
 		for ( size_t i = 0; i < size; ++i )
-			smtp_client.mail( EMAIL_ADDRESS_FROM, addresslist_to[i], EMAIL_TOPIC, EMAIL_MESSAGE, &id );
+			smtp_client.mail( EMAIL_ADDRESS_FROM, addresslist_to[i], EMAIL_TOPIC, EMAIL_MESSAGE, &guid, &id );
 
 		smtp_client.quit();
 	}

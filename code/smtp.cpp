@@ -2,7 +2,6 @@
 
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "smtp.h"
-#include "utils.h"
 #include "settings.h"
 
 #include <system_error>
@@ -490,6 +489,7 @@ bool smtp::client::mail(
 	_in ansicstr_t address_to,
 	_in cstr_t message_title,
 	_in cstr_t message_body,
+	_in guid *p_guid,
 	_in std::string *id /*= nullptr */
 ) {
 	send( "MAIL FROM:<%s>", address_from );
@@ -533,11 +533,14 @@ bool smtp::client::mail(
 		assert( s_pos );
 
 		guid guid( true );
-
+		
 	#pragma warning( suppress: 4996 )
-		wcsncpy( const_cast<str_t>(s_pos), guid.to_string(), guid::traits::size_string__chars() );
+		wcsncpy( const_cast<str_t>( s_pos ), guid.to_string(), guid::traits::size_string__chars() );
 
 		send( "%s", encode_mime__body( message.c_str(), crypto::method::quoted_printable ).c_str() );
+
+		if ( p_guid )
+			*p_guid = guid;
 	}
 
 	// зокончили формировать сообщение

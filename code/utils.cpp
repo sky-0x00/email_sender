@@ -226,9 +226,7 @@
 //---------------------------------------------------------------------------------------------------------------------
 guid::guid(
 	_in bool is_new /*= true*/
-) :
-	m_pstr( nullptr )
-{
+) {
 	if ( is_new )
 		create_new( m_data );
 	else
@@ -261,29 +259,34 @@ guid::operator const GUID&(
 const guid& guid::create_new(
 ) {
 	create_new( m_data );
+	if ( m_pstr )
+		clear_string();
 	return *this;
 }
 
 void guid::clear_string(
 ) {
 	assert( m_pstr );
-
-	const auto rpc_status = RpcStringFree( &m_pstr );
-	if ( RPC_S_OK == rpc_status )
-		return;
-	
-	TRACE_ERROR( L"RpcStringFree(), 0x%08X", rpc_status );
-	//throw rpc_status;
+	m_pstr.reset();
 }
 
 cstr_t guid::to_string(
 ) {
 	if ( m_pstr )
-		clear_string();
+		return reinterpret_cast< cstr_t >( *m_pstr );
 
-	const auto rpc_status = ::UuidToStringW( &m_data, &m_pstr );
+	m_pstr.reset( new RPC_WSTR, []( _out RPC_WSTR *p_str ) 
+	{
+		const auto rpc_status = RpcStringFree( p_str );
+		if ( RPC_S_OK == rpc_status )
+			return;
+	
+		TRACE_ERROR( L"RpcStringFree(), 0x%08X", rpc_status );
+		//throw rpc_status;
+	} );
+	const auto rpc_status = ::UuidToStringW( &m_data, m_pstr.get() );
 	if ( RPC_S_OK == rpc_status )
-		return reinterpret_cast< cstr_t >( m_pstr );
+		return reinterpret_cast< cstr_t >( *m_pstr );
 	
 	TRACE_ERROR( L"UuidToStringW(), 0x%08X", rpc_status );
 	throw rpc_status;

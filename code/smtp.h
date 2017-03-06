@@ -5,6 +5,7 @@
 #include <memory>
 #include "openssl.h"
 #include "crypto.h"
+#include "utils.h"
 
 #define NETWORK_SUPPORT( ver_hi, ver_lo )		smtp::wsalib wsalib( ver_hi, ver_lo )
 
@@ -86,7 +87,7 @@ namespace smtp
 		bool auth( _in ansicstr_t user_name, _in ansicstr_t user_pass, _in auth_type auth_type );
 		bool auth_plain( _in ansicstr_t user_name, _in ansicstr_t user_pass, _in bool is_forced = true );
 
-		bool mail( _in ansicstr_t address_from, _in ansicstr_t address_to, _in cstr_t message_title, _in cstr_t message_body, _in std::string *id = nullptr );
+		bool mail( _in ansicstr_t address_from, _in ansicstr_t address_to, _in cstr_t message_title, _in cstr_t message_body, _out guid *p_guid = nullptr, _out std::string *id = nullptr );
 		//void mail( _in ansicstr_t address_from, _in const ansicstr_t *addresslist_to, _in size_t size_to, _in ansicstr_t message_title, _in ansicstr_t message_body );
 
 		bool quit();

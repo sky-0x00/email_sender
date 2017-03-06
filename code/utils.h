@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include <string>
+#include <memory>
 #include <rpc.h>
 
 namespace string
@@ -69,5 +70,5 @@ private:
 	void clear_string();
 
 	GUID m_data;
-	RPC_WSTR m_pstr;
+	std::shared_ptr< RPC_WSTR > m_pstr;
 };
