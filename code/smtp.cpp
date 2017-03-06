@@ -10,6 +10,7 @@
 //#include <regex>
 #include <vector>
 #include <iterator>
+#include <algorithm>
 
 #pragma comment(lib, "ws2_32.lib")
 
