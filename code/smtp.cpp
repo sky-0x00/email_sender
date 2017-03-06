@@ -509,8 +509,8 @@ bool smtp::client::mail(
 
 	// заголовки сообщения
 	const auto &sender_name = encode_mime( EMAIL_FROM_NAME, crypto::method::base64 );
-	send( "From: \"%s\" <%s>", sender_name.c_str(), address_from );
-	send( "Reply-To: \"%s\" <%s>", sender_name.c_str(), address_from );
+	send( "From: %s <%s>", sender_name.c_str(), address_from );
+	send( "Reply-To: %s <%s>", sender_name.c_str(), address_from );
 	send( "To: <%s>", address_to );
 	send( "Subject: %s", encode_mime( message_title, crypto::method::base64 ).c_str() );
 	send( "MIME-Version: 1.0" );
@@ -526,7 +526,7 @@ bool smtp::client::mail(
 
 	// тело сообщения - преобразуем в utf-8 и кодируем в соответствии с заголовком "Content-Transfer-Encoding"
 	//send( "%s", encode_mime__body( message_body, crypto::method::base64 ).c_str() );
-	const auto x = encode_mime__body( message_body, crypto::method::quoted_printable );
+	//const auto x = encode_mime__body( message_body, crypto::method::quoted_printable );
 	send( "%s", encode_mime__body( message_body, crypto::method::quoted_printable ).c_str() );
 
 	// зокончили формировать сообщение
