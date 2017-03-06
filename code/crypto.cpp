@@ -443,8 +443,8 @@ void crypto::base64::test::init_data(
 	_in ansichar_t ch
 ) noexcept
 {
-	//return ('\t' == ch) || in_range< ansichar_t >( ch, { 32, 60 } ) || in_range< ansichar_t >( ch, { 62, 126 } );		// исключаем символ '='
-	return ('\t' == ch) || in_range< ansichar_t >( ch, { 32, 126 } );													// не исключаем символ '='
+	return ('\t' == ch) || in_range< ansichar_t >( ch, { 32, 60 } ) || in_range< ansichar_t >( ch, { 62, 126 } );		// исключаем символ '='
+	//return ('\t' == ch) || in_range< ansichar_t >( ch, { 32, 126 } );													// не исключаем символ '='
 }
 
 /*static*/ void crypto::quoted_printable::encoder::encode_byte(
