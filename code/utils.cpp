@@ -224,3 +224,50 @@
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+guid::guid(
+	_in bool is_new /*= true*/
+) {
+	if ( is_new )
+		create_new();
+	else
+		ZeroMemory( &m_data, sizeof(m_data) );
+}
+
+guid::operator const GUID&(
+) const noexcept
+{
+	return m_data;
+}
+
+void guid::create_new(
+) {
+	const auto hr = CoCreateGuid( &m_data );
+	if ( S_OK == hr )
+		return;
+	
+	TRACE_ERROR( L"CoCreateGuid(), 0x%08X", hr );
+	throw hr;
+}
+
+std::wstring guid::to_string(
+) const
+{
+	RPC_WSTR p_str;
+	auto rpc_status = UuidToStringW( &m_data, &p_str );
+	if ( RPC_S_OK != rpc_status )
+	{
+		TRACE_ERROR( L"UuidToStringW(), 0x%08X", rpc_status );
+		throw rpc_status;
+	}
+
+	std::wstring result( reinterpret_cast<const wchar_t*>( p_str ) );
+	
+	rpc_status = RpcStringFree( &p_str );
+	if (RPC_S_OK != rpc_status )
+	{
+		TRACE_ERROR( L"RpcStringFree(), 0x%08X", rpc_status );
+		throw rpc_status;
+	}
+}
+
+//---------------------------------------------------------------------------------------------------------------------

@@ -103,6 +103,10 @@ namespace smtp
 		__declspec( property ( get = get_buffer ) ) const char* buffer;
 
 	private:
+		
+		void guid__get( _out GUID &guid );
+		std::wstring guid_to
+
 		std::string encode_mime( _in cstr_t str, _in crypto::method crypto_method );
 		std::string encode_mime__body( _in cstr_t str, _in crypto::method crypto_method );			// также 8bit, 7bit, binary - пока не реализовано
 		bool check_result( _in int result_expected, _out int *p_result = nullptr ) const;

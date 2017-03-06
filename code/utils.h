@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include <string>
+#include <rpc.h>
 
 namespace string
 {
@@ -39,3 +40,14 @@ namespace string
 		static void test__to_ansi__utf8( _in ansicstr_t s_ansi, _in cstr_t s_wide );
 	};
 }
+
+class guid
+{
+public:
+	guid( _in bool is_new = true );
+	operator const GUID&() const noexcept;
+	void create_new();
+	std::wstring to_string() const;
+private:
+	GUID m_data;
+};
