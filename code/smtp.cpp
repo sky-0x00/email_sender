@@ -526,12 +526,45 @@ bool smtp::client::mail(
 
 	// тело сообщения - преобразуем в utf-8 и кодируем в соответствии с заголовком "Content-Transfer-Encoding"
 	{
+#ifdef USE_EXRERNAL_STYLE
 		std::wstring message( message_body );
+#else
+		std::wstring message;
+		{
+			auto s_pos = wcsstr( message_body, L"</style>" );
+			assert( s_pos );
+			message.assign( message_body, s_pos - message_body );
+			std::wifstream f_css( INTERNAL_STYLE_FILENAME, std::ios_base::in | std::ios_base::ate );
+			assert( f_css.is_open() );
 
-		static_assert(_countof( GUID_NULL__STRING ) == 1 + guid::traits::size_string__chars(), "size mismatch");
+			const auto css_size = f_css.tellg();
+			message.reserve( static_cast< size_t >( message.size() + css_size ) );
+			f_css.seekg( 0 );
+
+			// пропускаем BOM- маркер, если он имеется
+			if ( css_size >= 3 )
+			{
+				char_t bom[3];
+				f_css.read( bom, 3 );
+
+				if ( wcsncmp( bom, L"\xef\xbb\xbf", _countof( bom ) ) )
+					std::for_each( std::crbegin( bom ), std::crend( bom ), [&f_css]( _in char_t ch ) { f_css.putback(ch); } );
+			}
+			
+			// упаковываем css- стили
+			for ( char_t ch = static_cast< char_t >( f_css.get() ); !f_css.eof(); ch = static_cast< char_t >( f_css.get() ) )
+			{
+				//static const std::wstring exclude_chars = L"\t\r\n";
+				//if ( exclude_chars.find( ch ) == decltype(exclude_chars)::npos )
+					message.push_back( ch );
+			}
+			message += s_pos;
+		}
+#endif
 		auto s_pos = wcsstr( message.c_str(), GUID_NULL__STRING );
 		assert( s_pos );
 
+		static_assert(_countof( GUID_NULL__STRING ) == 1 + guid::traits::size_string__chars(), "size mismatch");
 		guid guid( true );
 		
 	#pragma warning( suppress: 4996 )
@@ -549,6 +582,7 @@ bool smtp::client::mail(
 	if ( !check_result( 250 ) )
 		return false;
 
+	// если нужно, сохраним id сообщения на сервере
 	if ( id )
 	{
 		std::pair< ansicstr_t, ansicstr_t > p_found = std::make_pair( strchr( m__buffer, '=' ), nullptr );
