@@ -72,3 +72,8 @@ private:
 	GUID m_data;
 	std::shared_ptr< RPC_WSTR > m_pstr;
 };
+
+namespace stdex
+{
+	double rand( _in const std::pair< int, int > &range );
+}

@@ -37,7 +37,7 @@
 #endif
 
 #define DO_PAUSE_IN_PROCESS
-#define PAUSE_SECS_MIN						1
+#define PAUSE_SECS_MIN						 1
 #define PAUSE_SECS_MAX						10
 
 #define LAST_EMAIL__FILE_NAME				LR"(..\data\email_sended.txt)"

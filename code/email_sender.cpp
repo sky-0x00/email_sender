@@ -11,6 +11,9 @@
 #include "crypto.h"
 #include "utils.h"
 #include "address.h"
+#include <cstdlib>
+#include <ctime>
+#include <thread>
 
 bool SetConsoleErrorToRedColor()
 {
@@ -148,8 +151,25 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 		std::string id;
 		guid guid;
 
+#ifdef DO_PAUSE_IN_PROCESS
+#if PAUSE_SECS_MIN != PAUSE_SECS_MAX
+		std::srand( static_cast<unsigned int>( std::time( nullptr )) );		// инициализируем rand()- генератор
+#endif
+#endif
 		for ( size_t i = 0; i < size; ++i )
+		{
 			smtp_client.mail( EMAIL_ADDRESS_FROM, addresslist_to[i], EMAIL_TOPIC, EMAIL_MESSAGE, &guid, &id );
+
+#ifdef DO_PAUSE_IN_PROCESS
+#if PAUSE_SECS_MIN == PAUSE_SECS_MAX
+			double sleep_for__secs = PAUSE_SECS_MIN;
+#else
+			double sleep_for__secs = stdex::rand( {PAUSE_SECS_MIN, PAUSE_SECS_MAX} );
+#endif
+			TRACE_NORMAL( L"sleep for %.3f sec...", sleep_for__secs );
+			std::this_thread::sleep_for( std::chrono::milliseconds( static_cast<unsigned int>(1000.0 * sleep_for__secs) ) );
+#endif
+		}
 
 		smtp_client.quit();
 	}
