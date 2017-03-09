@@ -527,9 +527,10 @@ bool smtp::client::mail(
 
 	// тело сообщения - преобразуем в utf-8 и кодируем в соответствии с заголовком "Content-Transfer-Encoding"
 	{
-#ifdef USE_EXRERNAL_STYLE
+#if USE_STYLE != STYLE_INTERNAL			// STYLE_INTERNAL или STYLE_INLINE
 		std::wstring message( message_body );
-#else
+
+#else		// STYLE_INTERNAL
 		std::wstring message;
 		{
 			auto s_pos = wcsstr( message_body, L"</style>" );

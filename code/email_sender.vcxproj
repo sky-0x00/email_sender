@@ -86,6 +86,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="address.h" />
     <ClInclude Include="crypto.h" />
     <ClInclude Include="openssl\include\aes.h" />
     <ClInclude Include="openssl\include\asn1.h" />
@@ -172,6 +173,7 @@
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="address.cpp" />
     <ClCompile Include="crypto.cpp" />
     <ClCompile Include="email_sender.cpp" />
     <ClCompile Include="openssl\include\applink.c">

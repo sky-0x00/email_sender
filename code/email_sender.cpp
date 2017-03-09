@@ -10,6 +10,7 @@
 #include <mbctype.h>
 #include "crypto.h"
 #include "utils.h"
+#include "address.h"
 
 bool SetConsoleErrorToRedColor()
 {
@@ -85,6 +86,12 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 	UNREFERENCED_PARAMETER( argv );
 
 	int exit_code = 0;
+
+	//const auto &email_last = address::get_last_email( LAST_EMAIL__FILE_NAME );
+	//address::email_base email_base( EMAIL_BASE__FILE_NAME, email_last.c_str() );
+	//auto email = email_base.get_next();
+	//email = nullptr;
+	//UNREFERENCED_PARAMETER( email );
 
 	//crypto::base64::test test;	
 	//test.encode__strings();		printf_s( "\n" );
