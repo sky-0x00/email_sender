@@ -90,9 +90,15 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 
 	int exit_code = 0;
 
-	//const auto &email_last = address::get_last_email( LAST_EMAIL__FILE_NAME );
-	//address::email_base email_base( EMAIL_BASE__FILE_NAME, email_last.c_str() );
-	//auto email = email_base.get_next();
+	const auto &email_last = address::email_log::get_last_email( EMAIL_LOG__FILE_NAME );
+	address::email_base email_base( EMAIL_BASE__FILE_NAME, email_last.c_str() );
+	const auto &email = email_base.get_next();
+
+	address::email_log  email_log( EMAIL_LOG__FILE_NAME );	 
+	const guid m_guid( true );
+	ansicstr_t message_id = "msg_id";
+	email_log.trace( email.c_str(), m_guid, message_id );
+
 	//email = nullptr;
 	//UNREFERENCED_PARAMETER( email );
 

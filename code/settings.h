@@ -40,5 +40,5 @@
 #define PAUSE_SECS_MIN						 1
 #define PAUSE_SECS_MAX						10
 
-#define LAST_EMAIL__FILE_NAME				LR"(..\data\email_sended.txt)"
-#define EMAIL_BASE__FILE_NAME				LR"(..\data\email_base.txt)"
+#define EMAIL_LOG__FILE_NAME				LR"(..\data\email.log)"
+#define EMAIL_BASE__FILE_NAME				LR"(..\data\email.base)"

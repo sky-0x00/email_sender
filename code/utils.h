@@ -3,6 +3,7 @@
 #include "types.h"
 #include <string>
 #include <memory>
+#include <fstream>
 #include <rpc.h>
 
 namespace string
@@ -64,16 +65,17 @@ public:
 	const guid& create_new();
 	static void create_new( _out GUID &guid );
 	
-	cstr_t to_string();
+	cstr_t to_string() const;
 
 private:
 	void clear_string();
 
 	GUID m_data;
-	std::shared_ptr< RPC_WSTR > m_pstr;
+	mutable std::shared_ptr< RPC_WSTR > m_pstr;
 };
 
 namespace stdex
 {
 	double rand( _in const std::pair< int, int > &range );
+	std::string ifstream_getline( _in std::ifstream &f_stream, _in ansichar_t ch_delim = '\n' );
 }

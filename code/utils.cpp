@@ -271,7 +271,8 @@ void guid::clear_string(
 }
 
 cstr_t guid::to_string(
-) {
+) const
+{
 	if ( m_pstr )
 		return reinterpret_cast< cstr_t >( *m_pstr );
 
@@ -297,6 +298,22 @@ double stdex::rand(
 	_in const std::pair< int, int > &range 
 ) {
 	return range.first + ( range.second - range.first ) * static_cast<double>( std::rand() ) / RAND_MAX;
+}
+
+std::string stdex::ifstream_getline(
+	_in std::ifstream &f_stream,
+	_in ansichar_t ch_delim /*= '\n'*/
+) {
+	std::string result;
+	do {
+		const auto ch = static_cast<ansichar_t>( f_stream.get() );
+		if ( ch_delim == ch )
+			break;
+		result.push_back( ch );
+	}
+	while ( !f_stream.eof() );
+
+	return result;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
