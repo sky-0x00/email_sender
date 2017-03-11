@@ -14,6 +14,13 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+#define CHECK_RESULT( expected )		\
+if ( !check_result( expected ) )		\
+{										\
+	reset();							\
+	return false;						\
+}
+
 static_assert( sizeof( sockaddr ) == sizeof( sockaddr_in ), "не совпадают размеры" );
 
 bool operator <( _in const in_addr &lhs, _in const in_addr &rhs ) 
@@ -495,18 +502,15 @@ bool smtp::client::mail(
 ) {
 	send( "MAIL FROM:<%s>", address_from );
 	receive();
-	if ( !check_result( 250 ) )
-		return false;
+	CHECK_RESULT( 250 );
 
 	send( "RCPT TO:<%s>", address_to );
 	receive();
-	if ( !check_result( 250 ) )
-		return false;
+	CHECK_RESULT( 250 );
 
 	send( "DATA" );
 	receive();
-	if ( !check_result( 354 ) )
-		return false;
+	CHECK_RESULT( 354 );
 
 	// заголовки сообщения
 	const auto &sender_name = encode_mime( EMAIL_FROM_NAME, crypto::method::base64 );
@@ -563,14 +567,18 @@ bool smtp::client::mail(
 			message += s_pos;
 		}
 #endif
-		auto s_pos = wcsstr( message.c_str(), GUID_NULL__STRING );
-		assert( s_pos );
-
 		static_assert(_countof( GUID_NULL__STRING ) == 1 + guid::traits::size_string__chars(), "size mismatch");
 		guid guid( true );
 		
+		auto s_pos = const_cast< str_t >( wcsstr( message.c_str(), GUID_NULL__STRING ) );
+		assert( s_pos );		
 	#pragma warning( suppress: 4996 )
-		wcsncpy( const_cast<str_t>( s_pos ), guid.to_string(), guid::traits::size_string__chars() );
+		wcsncpy( s_pos, guid.to_string(), guid::traits::size_string__chars() );
+
+		s_pos = const_cast< str_t >( wcsstr( s_pos + guid::traits::size_string__chars(), GUID_NULL__STRING ) );
+		assert( s_pos );
+	#pragma warning( suppress: 4996 )
+		wcsncpy( s_pos, guid.to_string(), guid::traits::size_string__chars() );
 
 		send( "%s", encode_mime__body( message.c_str(), crypto::method::quoted_printable ).c_str() );
 
@@ -581,8 +589,7 @@ bool smtp::client::mail(
 	// зокончили формировать сообщение
 	send( "." );									// "end-of-the-message" marker
 	receive();
-	if ( !check_result( 250 ) )
-		return false;
+	CHECK_RESULT( 250 );
 
 	// если нужно, сохраним id сообщения на сервере
 	if ( id )
@@ -619,4 +626,12 @@ bool smtp::client::quit(
 	receive();
 
 	return check_result( 221 );
+}
+
+bool smtp::client::reset(
+) {
+	send( "RSET" );
+	receive();
+
+	return check_result( 250 );
 }

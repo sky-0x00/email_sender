@@ -79,7 +79,7 @@ address::email_log::email_log(
 	
 	const auto error = GetLastError();
 	TRACE_ERROR( L"file \"%s\" not opened: %i", f_name, error );
-	throw std::logic_error( "can't open email log" );
+	throw std::logic_error( "can't open email_log" );
 }
 
 void address::email_log::trace(

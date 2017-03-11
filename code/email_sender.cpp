@@ -4,6 +4,7 @@
 #include "stdafx.h"
 
 #include "smtp.h"
+#include <conio.h>
 #include "settings.h"
 #include "openssl.h"
 #include <exception>
@@ -14,6 +15,13 @@
 #include <cstdlib>
 #include <ctime>
 #include <thread>
+
+#define WAITFOR_KBKEY( key )					\
+do {											\
+	if ( _kbhit() && (key == _getch()) )		\
+		break;									\
+}												\
+while ( true );
 
 bool SetConsoleErrorToRedColor()
 {
@@ -90,15 +98,6 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 
 	int exit_code = 0;
 
-	const auto &email_last = address::email_log::get_last_email( EMAIL_LOG__FILE_NAME );
-	address::email_base email_base( EMAIL_BASE__FILE_NAME, email_last.c_str() );
-	const auto &email = email_base.get_next();
-
-	address::email_log  email_log( EMAIL_LOG__FILE_NAME );	 
-	const guid m_guid( true );
-	ansicstr_t message_id = "msg_id";
-	email_log.trace( email.c_str(), m_guid, message_id );
-
 	//email = nullptr;
 	//UNREFERENCED_PARAMETER( email );
 
@@ -127,6 +126,18 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 		console__set_locale();
 		trace__set_filename();
 
+		const auto &email_last = address::email_log::get_last_email( EMAIL_LOG__FILE_NAME );
+		if ( !email_last.empty() )
+			wprintf( L"email_last: %S\n", email_last.c_str() );
+
+		wprintf( L"starting email_log \"%s\"...", EMAIL_LOG__FILE_NAME );
+		address::email_log  email_log( EMAIL_LOG__FILE_NAME );	 
+		wprintf( L" ok\n" );
+
+		wprintf( L"open email_base \"%s\"...", EMAIL_BASE__FILE_NAME );
+		address::email_base email_base( EMAIL_BASE__FILE_NAME, email_last.c_str() );
+		wprintf( L" ok\n" );
+		
 		NETWORK_SUPPORT( 2, 2 );
 
 		//const auto x = crypto::quoted_printable::encode( "Туры от naekvatore.ru - 23/01/2017" );
@@ -150,21 +161,34 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 			throw std::logic_error( error );
 		}
 
-		// формирование и отправка e-mail собщения
-		const ansicstr_t addresslist_to[] = EMAIL_ADDRESS_LIST_TO;
-		const size_t size = _countof( addresslist_to );
-		
-		std::string id;
-		guid guid;
-
+		// формирование и отправка e-mail собщения		
 #ifdef DO_PAUSE_IN_PROCESS
 #if PAUSE_SECS_MIN != PAUSE_SECS_MAX
 		std::srand( static_cast<unsigned int>( std::time( nullptr )) );		// инициализируем rand()- генератор
 #endif
 #endif
-		for ( size_t i = 0; i < size; ++i )
+		wprintf( L"starting email processing...\n\n" );
+		size_t count = 0;
+		for ( ;; ++count )
 		{
-			smtp_client.mail( EMAIL_ADDRESS_FROM, addresslist_to[i], EMAIL_TOPIC, EMAIL_MESSAGE, &guid, &id );
+			const auto &email = email_base.get_next();
+			if ( email.empty() )
+				break;
+
+			std::string id;
+			guid guid;
+
+			wprintf( L"> %S...", email.c_str() );
+			if ( smtp_client.mail( EMAIL_ADDRESS_FROM, email.c_str(), EMAIL_TOPIC, EMAIL_MESSAGE, &guid, &id ) )
+			{
+				// сохраняем информацию в лог
+				email_log.trace( email.c_str(), guid, id.c_str() );
+				wprintf( L" ok" );
+			} 
+			else
+			{
+				wprintf( L" error" );
+			}
 
 #ifdef DO_PAUSE_IN_PROCESS
 #if PAUSE_SECS_MIN == PAUSE_SECS_MAX
@@ -172,12 +196,19 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 #else
 			double sleep_for__secs = stdex::rand( {PAUSE_SECS_MIN, PAUSE_SECS_MAX} );
 #endif
-			TRACE_NORMAL( L"sleep for %.3f sec...", sleep_for__secs );
+			wprintf( L", sleep_for %.3f sec...", sleep_for__secs );
 			std::this_thread::sleep_for( std::chrono::milliseconds( static_cast<unsigned int>(1000.0 * sleep_for__secs) ) );
+			wprintf( L" ok\n" );
+#else
+			wprintf( L"\n" );
 #endif
 		}
 
 		smtp_client.quit();
+
+		wprintf( L"\ndone, %u email processed\npress [esc] for exit...", count );
+		WAITFOR_KBKEY( VK_ESCAPE );
+		wprintf( L" ok" );
 	}
 	catch ( const std::exception &e )
 	{

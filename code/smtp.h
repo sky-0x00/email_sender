@@ -91,6 +91,7 @@ namespace smtp
 		//void mail( _in ansicstr_t address_from, _in const ansicstr_t *addresslist_to, _in size_t size_to, _in ansicstr_t message_title, _in ansicstr_t message_body );
 
 		bool quit();
+		bool reset();
 
 		int get_result( _out _option ansicstr_t *data = nullptr ) const;
 
