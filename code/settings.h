@@ -3,12 +3,16 @@
 #define GUID_NULL__STRING				L"00000000-0000-0000-0000-000000000000"
 #define LOCALE_NAME						"Russian_Russia.1251"
 
-#define EMAIL_ADDRESS_FROM				"t.nemzinskiy@inbox.ru"
-#define EMAIL_ADDRESS_FROM_PASSWORD		"X46rNMY5LRFrCXrwRaxh"
+//#define EMAIL_ADDRESS_FROM				"t.nemzinskiy@inbox.ru"
+#define EMAIL_ADDRESS_FROM				"t.nemzinskiy@sky.net"
+//#define EMAIL_ADDRESS_FROM_PASSWORD		"..."
+#define EMAIL_ADDRESS_FROM_PASSWORD		"TR4sPDqIYpXemL2Xcdtf"
 #define EMAIL_FROM_NAME					L"Тихон Немзинский"
 
-#define SMTP_SERVER_NAME				"smtp.mail.ru"
-#define SMTP_SERVER_PORT				465						// SSL
+//#define SMTP_SERVER_NAME				"smtp.mail.ru"
+#define SMTP_SERVER_NAME				"localhost"
+//#define SMTP_SERVER_PORT				465						// SSL+
+#define SMTP_SERVER_PORT				25						// SSL-
 
 #define EMAIL_TOPIC								L"Альтернативные источники инвестиций - Cryp.Trade"
 

@@ -146,7 +146,7 @@ int wmain( _in size_t argc, _in cstr_t* argv[]
 		smtp::client smtp_client;
 
 		// соединяемся с smtp-сервером для отправки почты
-		exit_code = smtp_client.connect( SMTP_SERVER_NAME, SMTP_SERVER_PORT, smtp::client::connect_security::ssl );
+		exit_code = smtp_client.connect( SMTP_SERVER_NAME, SMTP_SERVER_PORT, smtp::client::connect_security::no_cypher );
 		if ( ERROR_SUCCESS != exit_code )
 			goto exit;
 		

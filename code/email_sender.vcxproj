@@ -63,6 +63,9 @@
       <AdditionalLibraryDirectories>$(ProjectDir)openssl\x32_lib\;</AdditionalLibraryDirectories>
       <AdditionalDependencies>rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>if exist "$(SolutionDir)data\email.log" del /f /q "$(SolutionDir)data\email.log"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

@@ -149,7 +149,7 @@ smtp::wsalib::status smtp::client::connect(
 {
 	std::list<in_addr> s_hostaddr;
 
-	// получаем все адреса узла с именем SMTP_SERVER_NAME - нашего почтового сервера для исходящих сообщений
+	// получаем все адреса узла с именем server_name - нашего почтового сервера для исходящих сообщений
 	wprintf_s( L"получение адресов узла \"%S\"...", server_name );	
 	const auto status = resolve_hostname( server_name, s_hostaddr );
 	if ( status )
